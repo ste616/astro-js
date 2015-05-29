@@ -2,9 +2,9 @@
 define([ "./base", "dojo/dom-attr", "dojox/timing", "dojo/dom",
 	 "dojo/_base/lang", "dojo/on", "./coordinate", "./angle",
 	 "./skyCoordinate", "./source", "dojo/dom-construct",
-	 "dojo/fx", "dojo/fx/Toggler", "dojo/dom-class" ],
+	 "dojo/fx", "dojo/fx/Toggler", "dojo/dom-class", "dojo/_base/Color" ],
   function(astrojs, domAttr, dTime, dom, lang, on, astroCoord, astroAngle,
-    astroSkyCoord, astroSource, domConstruct, coreFx, Toggler, domClass) {
+	   astroSkyCoord, astroSource, domConstruct, coreFx, Toggler, domClass, Colour) {
 
     /**
      * This object gives the user a number of quite useful routines for
@@ -295,5 +295,57 @@ define([ "./base", "dojo/dom-attr", "dojox/timing", "dojo/dom",
 
     };
 
+    // Calculate the luminosity contrast between two colours.
+    // From http://www.splitbrain.org/blog/2008-09/18-calculating_color_contrast_with_php
+    var calcLum = function(col) {
+      try {
+	if (typeof col === 'undefined' ||
+	    typeof col.r === 'undefined' ||
+	    typeof col.g === 'undefined' ||
+	    typeof col.b === 'undefined') {
+	  throw(new Error('Colour not correctly specified.'));
+	}
+      } catch (x) {
+	astrojs.catchError.apply(ERR, ['calcLum', x]);
+	return undefined;
+      }
+      var l = 0.2126 * Math.pow(col.r / 255, 2.2) +
+	  0.7152 * Math.pow(col.g / 255, 2.2) +
+	  0.0722 * Math.pow(col.b / 255, 2.2);
+      
+      return l;
+    };
+    
+    var lumdiff = function(col1, col2) {
+      // Each of col1 and col2 should be an object with
+      // { r: val, g: val, b: val }
+      var l1 = calcLum(col1);
+      var l2 = calcLum(col2);
+      
+      if (l1 > l2) {
+	return ((l1 + 0.05) / (l2 + 0.05));
+      } else {
+	return ((l2 + 0.05) / (l1 + 0.05));
+      }
+    };
+    
+    rObj.foregroundColour = function(bgcol) {
+      // Determine which foreground colour to use for a particular
+      // background colour.
+
+      // Check for black.
+      var black = new Colour({ 'r': 0, 'g': 0, 'b': 0 });
+      var white = new Colour({ 'r': 255, 'g': 255, 'b': 255 });
+      var blackDiff = lumdiff(bgcol, black);
+      var whiteDiff = lumdiff(bgcol, white);
+
+      if (blackDiff > whiteDiff) {
+	return black;
+      } else {
+	return white;
+      }
+    };
+
+    
     return rObj;
   });
